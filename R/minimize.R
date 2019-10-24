@@ -96,10 +96,27 @@ minimize <- function(
     if (res$status == 5 | res$status == 6)
         warning(res$message)
 
+    # get Lagrange multipliers of unconditional scores
+    d_obj    <- gradient(objective, design)
+    d_constr <- lapply(subject_to@unconditional_constraints, function(x) gradient(x@score, design))
+    f <- function(lambda) {
+        res <- d_obj
+        for (i in 1:length(d_constr)) {
+            res <- res + lambda[i] * d_constr[[i]]
+        }
+        return(sum(res^2))
+    }
+    lagrange_multipliers <- nloptr::nloptr(numeric(length(subject_to@unconditional_constraints)), function(x) sum(f(x)^2), opts = list(
+        algorithm   = "NLOPT_LN_COBYLA",
+        xtol_rel    = 1e-6,
+        maxeval     = 10000
+    ))$solution # todo: some desaster recovery?
+
     res <- list(
         design        = update(initial_design, res$solution),
         nloptr_return = res,
-        call_args     = args
+        call_args     = args,
+        lagrange_multipliers = lagrange_multipliers
     )
     class(res) <- c("adoptrOptimizationResult", class(res))
     return(res)
@@ -109,7 +126,12 @@ minimize <- function(
 
 #' @rawNamespace S3method(print, adoptrOptimizationResult)
 print.adoptrOptimizationResult <- function(x, ...) {
-    cat(sprintf("optimized %s", utils::capture.output(print(x$design))), "\n")
+    cat(sprintf("optimized %s", paste0(utils::capture.output(print(x$design)), collapse = '\n')), "\n")
+}
+
+
+print.adoptrOptimizationResult <- function(x, ...) {
+    cat(sprintf("optimized %s", paste0(utils::capture.output(print(x$design)), collapse = '\n')), "\n")
 }
 
 
