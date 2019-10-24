@@ -223,7 +223,7 @@ setGeneric("gradient", function(score, design, ...) standardGeneric("gradient"))
 setMethod("gradient", signature("Score", "TwoStageDesign"),
           function(score, design, epsilon = 1e-2, ...) {
               dsgn       <- tunable_parameters(design)
-              old_value  <- evaluate(score, design)
+              old_value  <- evaluate(score, design, optimization = TRUE)
               num_params <- sapply(
                   names(design@tunable)[design@tunable],
                   function(x) length(slot(design, name = x))
@@ -236,7 +236,7 @@ setMethod("gradient", signature("Score", "TwoStageDesign"),
               delta <- numeric(k)
               for (i in 1:k) {
                   delta[i] <- epsilon
-                  grad[i]  <- (evaluate(score, update(design, dsgn + delta)) - old_value) / epsilon
+                  grad[i]  <- (evaluate(score, update(design, dsgn + delta), optimization = TRUE) - old_value) / epsilon
                   delta[i] <- 0
               }
               return(grad)
