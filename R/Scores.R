@@ -216,3 +216,29 @@ setMethod(".evaluate", signature("IntegralScore", "OneStageDesign"),
                   )
               return(res)
           })
+
+
+setGeneric("gradient", function(score, design, ...) standardGeneric("gradient"))
+
+setMethod("gradient", signature("Score", "TwoStageDesign"),
+          function(score, design, epsilon = 1e-2, ...) {
+              dsgn       <- tunable_parameters(design)
+              old_value  <- evaluate(score, design)
+              num_params <- sapply(
+                  names(design@tunable)[design@tunable],
+                  function(x) length(slot(design, name = x))
+              )
+              k    <- sum(num_params)
+              grad <- numeric(k)
+              for (i in 1:length(num_params)) {
+                  names(grad)[(cumsum(c(0, num_params))[i] + 1):(cumsum(num_params)[i])] <- names(num_params)[i]
+              }
+              delta <- numeric(k)
+              for (i in 1:k) {
+                  delta[i] <- epsilon
+                  grad[i]  <- (evaluate(score, update(design, dsgn + delta)) - old_value) / epsilon
+                  delta[i] <- 0
+              }
+              return(grad)
+          })
+
